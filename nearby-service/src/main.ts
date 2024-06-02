@@ -17,7 +17,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.useGlobalPipes(new ValidationPipe());
   app.enableCors({
-    origin: `${configService.get('FRONTEND_URL')}`,
+    // origin: `${configService.get('FRONTEND_URL')}`,
   });
   await app.listen(3000);
 }

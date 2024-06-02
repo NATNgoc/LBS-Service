@@ -13,7 +13,7 @@ export class BaseEntity {
   @Prop({ default: null, name: 'deleted_at' })
   @Exclude()
   deletedAt?: Date;
-  
+
   createdAt?: Date;
 
   @Exclude()

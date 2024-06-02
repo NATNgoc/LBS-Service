@@ -6,7 +6,6 @@ import {
   IsIn,
   IsNotEmpty,
   IsNumber,
-  IsNumberString,
   IsOptional,
   Matches,
   Max,
@@ -14,7 +13,7 @@ import {
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
-import { BusinessConstant, FindNearByConstant } from 'src/common/constant';
+import { BusinessConstant } from 'src/common/constant';
 import { DayEnum } from 'src/common/enum';
 import { QueryFilterBase } from 'src/core/pagination';
 
@@ -53,17 +52,14 @@ export class TimeOpen {
 const AvailableStar = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
 
 export class FindNearbyServiceDto extends QueryFilterBase {
-
-
-  @ApiPropertyOptional({example: 'Nhà hàng gần đây'})
-  q: string
+  @ApiPropertyOptional({ example: 'Nhà hàng gần đây' })
+  q: string;
 
   @IsNotEmpty()
   @ApiProperty({ example: '10.78' })
   @Transform(({ value }) => parseFloat(value))
   @IsNumber()
   latitude: number;
-
 
   @IsNotEmpty()
   @ApiProperty({ example: '106.78' })
@@ -75,7 +71,7 @@ export class FindNearbyServiceDto extends QueryFilterBase {
   @Transform(({ value }) => parseFloat(value))
   @Min(0.5)
   @Max(20)
-  @ApiProperty({ example: '10', description: "Radius in kilometer" })
+  @ApiProperty({ example: '10', description: 'Radius in kilometer' })
   radius: number;
 
   @ApiPropertyOptional({ default: false })
@@ -121,9 +117,9 @@ export class FindNearbyServiceDto extends QueryFilterBase {
   @Matches(/^[0-9a-fA-F]{24}$/, { message: 'categoryId is invalid objectId' })
   categoryId: string;
 
-
   @Transform(({ value }) => (value === 'true' ? true : false))
   @IsBoolean()
+  @IsOptional()
   @ApiPropertyOptional()
-  isNearest: boolean = true;
+  isNearest: boolean;
 }

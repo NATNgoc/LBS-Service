@@ -4,14 +4,15 @@ import { plainToClass } from 'class-transformer';
 import * as Dayjs from 'dayjs';
 import * as geolib from 'geolib';
 import { Model, PipelineStage } from 'mongoose';
-import { FindNearByConstant } from 'src/common/constant';
+import { BusinessConstant, FindNearByConstant } from 'src/common/constant';
 import { BusinessStatusEnum, DayEnum } from 'src/common/enum';
+import { createQueryParams, transStringToObjectId } from 'src/common/utils';
 import { PaginationResult, getBasePipeLine } from 'src/core/pagination';
 import {
   FindNearbyServiceDto,
   TimeOpenTypeEnum,
 } from './dto/find-nearby-service.dto';
-import { Business, BusinessDocument } from './entities/business.entity';
+import { Business, BusinessDocument, BusinessSchema } from './entities/business.entity';
 @Injectable()
 export class FindNearbyService {
   constructor(
@@ -25,7 +26,10 @@ export class FindNearbyService {
     const pipeLine = await this.getPipeLineQueryNearByService(data);
     const aggregateResult = await this.businessModel.aggregate(pipeLine).exec();
     const businesses = aggregateResult[0]['data'].map((business: Business) => {
-      const businessObj = plainToClass(Business, business);
+      const businessObj = plainToClass(Business, business, {
+        // enableImplicitConversion: true,
+      });
+
       const distance = geolib.getDistance(
         { latitude: data.latitude, longitude: data.longitude },
         {
@@ -37,7 +41,7 @@ export class FindNearbyService {
       return businessObj;
     });
     if (data.isNearest === true) {
-      await businesses.sort((a, b) => a._distance - b._distance);
+      businesses.sort((a, b) => a._distance - b._distance);
     }
     return {
       totalRecords: aggregateResult[0]['totalRecords'],
@@ -69,16 +73,16 @@ export class FindNearbyService {
   createLink(queryData: any, URL: string, totalPage: number) {
     const offset = queryData.offset;
     const limit = queryData.limit;
-    const firstLink = this.createQueryParams({ ...queryData, offset: 1 });
-    const lastLink = this.createQueryParams({
+    const firstLink = createQueryParams({ ...queryData, offset: 1 });
+    const lastLink = createQueryParams({
       ...queryData,
       offset: totalPage,
     });
-    const previousLink = this.createQueryParams({
+    const previousLink = createQueryParams({
       ...queryData,
       offset: offset - 1,
     });
-    const nextLink = this.createQueryParams({
+    const nextLink = createQueryParams({
       ...queryData,
       offset: offset + 1,
     });
@@ -91,17 +95,6 @@ export class FindNearbyService {
     };
 
     return links;
-  }
-
-  createQueryParams(queryFilter: Object): string {
-    let queryParams = Object.keys(queryFilter)
-      .filter(
-        (key) => queryFilter[key] !== undefined && queryFilter[key] !== null,
-      )
-      .map((key) => `${key}=${encodeURIComponent(queryFilter[key])}`)
-      .join('&');
-
-    return queryParams ? `${queryParams}` : '';
   }
 
   mappingDayJsToDay(currentDay: number): DayEnum {
@@ -155,17 +148,13 @@ export class FindNearbyService {
     }
 
     if (data.star) {
-      matchStage['overall_rating'] = { $gte: data.star };
+      matchStage['overallRating'] = { $gte: data.star };
     }
     if (data.categoryId) {
-      matchStage['category_id'] = data.categoryId;
+      matchStage['category._id'] = transStringToObjectId(data.categoryId);
     }
 
-    if ('isHighRating' in data) {
-      sortStage = {
-        overall_rating: data.isHighRating === true ? -1 : 1,
-      };
-    }
+    sortStage['overallRating'] = data.isHighRating === true ? -1 : 1;
 
     if (data.timeOpenType != TimeOpenTypeEnum.EVERY_TIME) {
       const currentDay: DayEnum = this.mappingDayJsToDay(Dayjs().day());
@@ -176,7 +165,7 @@ export class FindNearbyService {
       });
       switch (data.timeOpenType) {
         case TimeOpenTypeEnum.IS_OPENING:
-          matchStage['day_of_week'] = {
+          matchStage['dayOfWeek'] = {
             $elemMatch: {
               day: currentDay,
               openTime: { $lte: currentTime },
@@ -185,16 +174,16 @@ export class FindNearbyService {
           };
           break;
         case TimeOpenTypeEnum.ALL_DAY:
-          matchStage['day_of_week'] = {
+          matchStage['dayOfWeek'] = {
             $elemMatch: {
               day: currentDay,
-              openTime: { $eq: '08:00' },
-              closeTime: { $eq: '22:00' },
+              openTime: { $eq: BusinessConstant.OPEN_TIME_ALL_DAY },
+              closeTime: { $eq: BusinessConstant.CLOSE_TIME_ALL_DAY },
             },
           };
           break;
         case TimeOpenTypeEnum.SPECIFIC_TIME:
-          matchStage['day_of_week'] = {
+          matchStage['dayOfWeek'] = {
             $elemMatch: {
               day: data.day,
               openTime: { $lte: data.openTime },
@@ -204,10 +193,6 @@ export class FindNearbyService {
           break;
       }
     }
-
-    // if (data.isNearest === false) {
-    //   sortStage['distance'] = -1;
-    // }
 
     if (Object.keys(matchStage).length > 0) {
       finalPipeline.push({ $match: matchStage });
