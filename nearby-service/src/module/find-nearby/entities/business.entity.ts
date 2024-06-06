@@ -7,7 +7,6 @@ import { BaseEntity } from 'src/core/entity/base/entity.base';
 import { DayOpenCloseTimeSchema } from './dayOpenCloseTime.entity';
 import { Image } from './image.entity';
 import { StarSchema } from './star.entity';
-import { SerializeOptions } from '@nestjs/common';
 
 const defaultStars: StarSchema[] = [
   {
@@ -64,6 +63,9 @@ export class SimpleCategorySchema {
 
   @Prop({ required: true, trim: true })
   name: string;
+
+  @Prop({ required: true, trim: true })
+  linkURL: string;
 }
 
 @Schema({
